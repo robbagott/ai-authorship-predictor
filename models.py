@@ -6,7 +6,7 @@ import transformers
 class DebertaBase(nn.Module):
     def __init__(self):
         super().__init__()
-        self.model = None # TODO
+        self.deberta = transformers.DebertaV2Model.from_pretrained('microsoft/deberta-v3-xsmall')
 
     def forward(self, input):
-        return self.model(input)
+        return self.deberta(input)

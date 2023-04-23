@@ -70,7 +70,8 @@ def main(
     no_mps: Optional[bool] = typer.Option(False, help='Disables macOS GPU training (default: False).'), 
     seed: Optional[int] = typer.Option(1, help='Random seed (default: 1).'),
     log_interval: Optional[int] = typer.Option(10, help='how many batches to wait before logging training status (default: 10).'),
-    save_model: Optional[bool] = typer.Option(False, help='For saving the current model.')):
+    save_model: Optional[bool] = typer.Option(False, help='For saving the current model.'),
+    alpha: Optional[float] = typer.Option(1, help='Margin value for triplet loss.')):
     args = {
         'batch_size': batch_size,
         'test_batch_size': test_batch_size,
@@ -87,7 +88,7 @@ def main(
     train_loader, test_loader = load_data()
 
     model = DebertaBase().to(device)
-    loss_fn = TripletLoss()
+    loss_fn = TripletLoss(alpha)
     writer = SummaryWriter()
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
 
