@@ -9,6 +9,7 @@ from typing import Optional
 from models import DebertaBase
 from preprocess import load_data
 from losses import TripletLoss
+from losses import triplet_acc
 
 device = 'cuda' if torch.cuda.is_available() else "cpu"
 
@@ -26,13 +27,15 @@ def train(args, model, device, train_loader, optimizer, loss_fn, writer):
     model.train()
     n_batches = 0
 
-    for _ in range(1, args['epochs'] + 1):
-        for batch_idx, (data, target) in enumerate(tqdm(train_loader)):
-            data, target = data.to(device), target.to(device)
+    for _ in range(args['epochs']):
+        for batch_idx, (a, p, n) in enumerate(tqdm(train_loader)):
+            a, p, n = a.to(device), p.to(device), n.to(device)
             optimizer.zero_grad()
 
-            output = model(data)
-            loss = loss_fn(output, target)
+            a_embed = model(a)
+            p_embed = model(p)
+            n_embed = model(n)
+            loss = loss_fn(a_embed, p_embed, n_embed)
             loss.backward()
             optimizer.step()
 
@@ -40,23 +43,25 @@ def train(args, model, device, train_loader, optimizer, loss_fn, writer):
             if batch_idx % args['log_interval'] == 0:
                 writer.add_scalar('Loss/train', loss, n_batches)
 
-def test(model, device, test_loader, verbose=False):
+# Tests a model with triplet accuracy.
+def test(model, device, test_loader, loss_fn, verbose=False):
     model.eval()
     test_loss = 0
     correct = 0
     test_acc = 0
     with torch.no_grad():
-        for data, target in test_loader:
-            data, target = data.to(device), target.to(device)
-            out = model(data)
-            test_loss += F.nll_loss(out, target, reduction='sum').item() # Sum up batch loss.
-            pred = out.argmax(dim=1, keepdim=True)
-            correct += pred.eq(target.view_as(pred)).sum().item()
+        for a, p, n in test_loader:
+            a, p, n = a.to(device), p.to(device), n.to(device)
+            a_embed = model(a)
+            p_embed = model(p)
+            n_embed = model(n)
+            loss += torch.sum(loss_fn(a_embed, p_embed, n_embed)).item()
+            acc += torch.sum(triplet_acc(a_embed, p_embed, n_embed)).item()
 
     test_loss /= len(test_loader.dataset)
     test_acc = correct / len(test_loader.dataset)
     if verbose:
-        print('\nTest set: Average loss: {:.4f}, Accuracy: {}/{} ({:.0f}%)\n'.format(
+        print('\nTest set: Average loss: {:.4f}, Triplet accuracy: {}/{} ({:.0f}%)\n'.format(
             test_loss, correct, len(test_loader.dataset),
             100. * correct / len(test_loader.dataset)))
     return test_loss, test_acc
@@ -87,13 +92,14 @@ def main(
 
     train_loader, test_loader = load_data()
 
-    model = DebertaBase().to(device)
+    # Note: 384 is the embed size of xsmall deberta model.
+    model = DebertaBase('microsoft/deberta-v3-xsmall', 384, probe=True).to(device)
     loss_fn = TripletLoss(alpha)
     writer = SummaryWriter()
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
 
     train(args, model, device, train_loader, test_loader, optimizer, loss_fn, writer)
-    test(model, device, test_loader, verbose=True)
+    test(model, device, test_loader, loss_fn, verbose=True)
 
     if save_model:
         torch.save(model.state_dict(), "model.pt")
