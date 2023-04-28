@@ -80,7 +80,8 @@ def main():
     news_articles = jsonObj[jsonObj['media-type']=='News']
 
     data = {'fake': [], 'real': []}
-    for count, i in tqdm(enumerate(news_articles.index)):
+    count = 0
+    for i in tqdm(news_articles.index):
         news_article = news_articles.iloc[i]
 
         word_count = count_words(news_article["content"])
@@ -97,7 +98,8 @@ def main():
         data['fake'].append(fake_article)
         data['real'].append(real_article)
 
-        if count % 1 == 0:
+        count += 1
+        if count % 30 == 0:
             df = pd.DataFrame.from_dict(data)
             df.to_csv('data/chat_gpt_real_fake_data.csv')
 
