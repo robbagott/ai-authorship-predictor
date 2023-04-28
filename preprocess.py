@@ -33,6 +33,11 @@ class ArticleDataset(torch.utils.data.Dataset):
     def __init__(self, train=True, transform=None):
         self.train = train
         self.transform = transform
+
+        
+
+
+
     
     def __get_item__(self, index):
         pass
