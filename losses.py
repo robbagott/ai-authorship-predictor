@@ -11,3 +11,4 @@ class TripletLoss(nn.Module):
 
 def triplet_acc(a_embed, p_embed, n_embed, alpha):
     return torch.cdist(a_embed, p_embed) + alpha < torch.cdist(a_embed, n_embed)
+
