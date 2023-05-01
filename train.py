@@ -88,8 +88,8 @@ def main(
 
     train_loader, test_loader = load_data()
 
-    # Note: 384 is the embed size of xsmall deberta model.
-    model = DebertaBase('microsoft/deberta-v3-xsmall', 384, probe=True).to(device)
+    # Note: 768 is the embed size of deberta base model.
+    model = DebertaBase('microsoft/deberta-base', 768, probe=True).to(device)
     loss_fn = TripletLoss(alpha)
     writer = SummaryWriter()
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
