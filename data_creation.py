@@ -12,7 +12,7 @@ example_2={"id":"fef007d8-b1d4-42b8-b9fe-086965297512","content":"WASHINGTON \u2
 
 def remove_formatting_codes(text):
   """Removes formatting codes from a string"""
-  pattern = re.compile(r'[\n\u2028\u2029\u00A0]')
+  pattern = re.compile(r'[\n\u2028\u2029\u00A0\t]')
   return re.sub(pattern, ' ', text)
 
 def count_words(text):
@@ -76,7 +76,10 @@ def write_article(title, source, word_count):
     return content
 
 def main():
-    jsonObj = pd.read_json(path_or_buf='data/signalmedia-1000.jsonl', lines=True)
+    INPUT_JSON = 'data/test.jsonl' # 'data/signalmedia-1000.jsonl'
+    OUTPUT_PATH = 'data/test.csv' # 'data/train.csv' 
+
+    jsonObj = pd.read_json(path_or_buf=INPUT_JSON, lines=True)
     news_articles = jsonObj[jsonObj['media-type']=='News']
 
     data = {'fake': [], 'real': []}
@@ -101,10 +104,22 @@ def main():
         count += 1
         if count % 30 == 0:
             df = pd.DataFrame.from_dict(data)
-            df.to_csv('data/chat_gpt_real_fake_data.csv')
+            df.to_csv(OUTPUT_PATH)
 
     df = pd.DataFrame.from_dict(data)
-    df.to_csv('data/chat_gpt_real_fake_data.csv')
+    data_cleaning(df, OUTPUT_PATH)
+    # df.to_csv('data/chat_gpt_real_fake_data.csv')
+
+def data_cleaning(df, output_path):
+    # df = pd.read_csv('data/chat_gpt_real_fake_data.csv')
+
+    data = {'fake': [], 'real': []}
+    for i in tqdm(df.index):
+        data['fake'].append(re.sub('\s{2,}', ' ', df.iloc[i]["fake"]))
+        data['real'].append(re.sub('\s{2,}', ' ', df.iloc[i]["real"]))
     
+    df_new = pd.DataFrame.from_dict(data)
+    df_new.to_csv(output_path)
+
 if __name__=="__main__":
    main()
