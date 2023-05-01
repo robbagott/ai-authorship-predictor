@@ -7,6 +7,17 @@ from torch.nn.utils.rnn import pad_sequence
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
+def load_data(model_name, batch_size=64):
+    train_path = 'data/train.csv'
+    train_dataset = ArticleDataset(train_path, model_name)
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+
+    test_path = 'data/test.csv'
+    test_dataset = ArticleDataset(test_path, model_name)
+    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=True)
+
+    return train_loader, test_loader
+
 class ArticleDataset(torch.utils.data.Dataset):
     def __init__(self, data_path, model_name, chunk_length=256, max_len=512):
         self.df = pd.read_csv(data_path)

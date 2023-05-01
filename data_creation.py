@@ -122,4 +122,6 @@ def data_cleaning(df, output_path):
     df_new.to_csv(output_path)
 
 if __name__=="__main__":
-   main()
+   df = pd.read_csv('data/test.csv')
+   output_path = 'data/test_cleaned.csv'
+   data_cleaning(df, output_path)
