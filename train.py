@@ -71,10 +71,9 @@ def main(
     test_batch_size: Optional[int] = typer.Option(1000, help='Input batch size for testing (default: 1000).'), 
     epochs: Optional[int] = typer.Option(10, help='Number of epochs to train (default: 10).'), 
     lr: Optional[float] = typer.Option(0.1, help='Learning rate (default: 0.1).'), 
-    no_cuda: Optional[bool] = typer.Option(False, help='Disables CUDA training (default: False).'), 
-    no_mps: Optional[bool] = typer.Option(False, help='Disables macOS GPU training (default: False).'), 
     seed: Optional[int] = typer.Option(1, help='Random seed (default: 1).'),
     log_interval: Optional[int] = typer.Option(10, help='how many batches to wait before logging training status (default: 10).'),
+    model_name: Optional[str] = typer.Option('microsoft/deberta-base', help='Name of the transformer model (hugging face)'),
     save_model: Optional[bool] = typer.Option(False, help='For saving the current model.'),
     alpha: Optional[float] = typer.Option(1, help='Margin value for triplet loss.')):
     args = {
@@ -82,23 +81,21 @@ def main(
         'test_batch_size': test_batch_size,
         'epochs': epochs,
         'lr': lr,
-        'no_cuda': no_cuda,
-        'no_mps': no_mps,
         'seed': seed,
         'log_interval': log_interval,
         'save_model': save_model,
     }
     torch.manual_seed(seed)
 
-    train_loader, test_loader = load_data()
+    train_loader, test_loader = load_data(model_name, batch_size)
 
-    # Note: 384 is the embed size of xsmall deberta model.
-    model = DebertaBase('microsoft/deberta-v3-xsmall', 384, probe=True).to(device)
+    # Note: 768 is the embed size of deberta base model.
+    model = DebertaBase(model_name, 768, probe=True).to(device)
     loss_fn = TripletLoss(alpha)
     writer = SummaryWriter()
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
 
-    train(args, model, device, train_loader, test_loader, optimizer, loss_fn, writer)
+    train(args, model, device, train_loader, optimizer, loss_fn, writer)
     test(model, device, test_loader, loss_fn, verbose=True)
 
     if save_model:
