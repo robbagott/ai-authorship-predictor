@@ -44,7 +44,7 @@ def train(args, model, device, train_loader, optimizer, loss_fn, writer):
                 writer.add_scalar('Loss/train', loss, n_batches)
 
 # Tests a model with triplet accuracy.
-def test(model, device, test_loader, loss_fn, verbose=False):
+def test(model, device, test_loader, loss_fn, acc_fn, verbose=False):
     model.eval()
     test_loss = 0
     correct = 0
@@ -55,8 +55,8 @@ def test(model, device, test_loader, loss_fn, verbose=False):
             a_embed = model(a)
             p_embed = model(p)
             n_embed = model(n)
-            loss += torch.sum(loss_fn(a_embed, p_embed, n_embed)).item()
-            acc += torch.sum(triplet_acc(a_embed, p_embed, n_embed)).item()
+            test_loss += torch.sum(loss_fn(a_embed, p_embed, n_embed)).item()
+            test_acc += torch.sum(acc_fn(a_embed, p_embed, n_embed)).item()
 
     test_loss /= len(test_loader.dataset)
     test_acc = correct / len(test_loader.dataset)
@@ -74,7 +74,7 @@ def main(
     seed: Optional[int] = typer.Option(1, help='Random seed (default: 1).'),
     log_interval: Optional[int] = typer.Option(10, help='how many batches to wait before logging training status (default: 10).'),
     model_name: Optional[str] = typer.Option('microsoft/deberta-base', help='Name of the transformer model (hugging face)'),
-    save_model: Optional[bool] = typer.Option(False, help='For saving the current model.'),
+    save_model: Optional[bool] = typer.Option(True, help='For saving the current model.'),
     alpha: Optional[float] = typer.Option(1, help='Margin value for triplet loss.')):
     args = {
         'batch_size': batch_size,
@@ -92,14 +92,16 @@ def main(
     # Note: 768 is the embed size of deberta base model.
     model = DebertaBase(model_name, 768, probe=True).to(device)
     loss_fn = TripletLoss(alpha)
+    acc_fn = triplet_acc(alpha)
     writer = SummaryWriter()
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
 
     train(args, model, device, train_loader, optimizer, loss_fn, writer)
-    test(model, device, test_loader, loss_fn, verbose=True)
 
     if save_model:
         torch.save(model.state_dict(), "model.pt")
+
+    test(model, device, test_loader, loss_fn, acc_fn, verbose=True)
 
 if __name__ == '__main__':
     typer.run(main)

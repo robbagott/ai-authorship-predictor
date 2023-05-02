@@ -12,8 +12,8 @@ class TripletLoss(nn.Module):
         loss = torch.relu(p_dist - n_dist + self.alpha)
         return loss.sum()
 
-def triplet_acc(a_embed, p_embed, n_embed, alpha):
-    return torch.cdist(a_embed, p_embed) + alpha < torch.cdist(a_embed, n_embed)
+def triplet_acc(alpha):
+    return lambda a_embed, p_embed, n_embed: torch.cdist(a_embed, p_embed) + alpha < torch.cdist(a_embed, n_embed)
 
 class ConstrastLoss(nn.Module):
     def __init__(self, temp):
