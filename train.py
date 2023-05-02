@@ -73,6 +73,7 @@ def main(
     lr: Optional[float] = typer.Option(0.1, help='Learning rate (default: 0.1).'), 
     seed: Optional[int] = typer.Option(1, help='Random seed (default: 1).'),
     log_interval: Optional[int] = typer.Option(10, help='how many batches to wait before logging training status (default: 10).'),
+    model_name: Optional[str] = typer.Option('microsoft/deberta-base', help='Name of the transformer model (hugging face)'),
     save_model: Optional[bool] = typer.Option(False, help='For saving the current model.'),
     alpha: Optional[float] = typer.Option(1, help='Margin value for triplet loss.')):
     args = {
@@ -86,15 +87,15 @@ def main(
     }
     torch.manual_seed(seed)
 
-    train_loader, test_loader = load_data()
+    train_loader, test_loader = load_data(model_name, batch_size)
 
     # Note: 768 is the embed size of deberta base model.
-    model = DebertaBase('microsoft/deberta-base', 768, probe=True).to(device)
+    model = DebertaBase(model_name, 768, probe=True).to(device)
     loss_fn = TripletLoss(alpha)
     writer = SummaryWriter()
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
 
-    train(args, model, device, train_loader, test_loader, optimizer, loss_fn, writer)
+    train(args, model, device, train_loader, optimizer, loss_fn, writer)
     test(model, device, test_loader, loss_fn, verbose=True)
 
     if save_model:

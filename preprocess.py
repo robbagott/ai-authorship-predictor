@@ -102,7 +102,7 @@ class ArticleDataset(torch.utils.data.Dataset):
         return len(self.A)
 
 if __name__ == '__main__':
-    dataset = ArticleDataset('data/train.csv', 'microsoft/deberta-v3-xsmall')
+    dataset = ArticleDataset('data/train.csv', 'mlcorelib/debertav2-base-uncased')
     loader = DataLoader(dataset, batch_size=10)
     item = next(iter(loader))
     a, p, n = item

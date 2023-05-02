@@ -7,7 +7,7 @@ import transformers
 class DebertaBase(nn.Module):
     def __init__(self, model_name, embed_size, probe=True):
         super().__init__()
-        self.deberta = transformers.DebertaV2Model.from_pretrained(model_name)
+        self.deberta = transformers.DebertaModel.from_pretrained(model_name)
         self.mlp = nn.Sequential(
             nn.Linear(embed_size, embed_size),
             nn.ReLU(),
@@ -20,7 +20,7 @@ class DebertaBase(nn.Module):
             self.deberta.requires_grad_(False)
 
     def forward(self, input):
-        return self.mlp(self.deberta(input))
+        return self.mlp(self.deberta(input).last_hidden_state)
 
 class BertBase(nn.Module):
     def __init__(self, model_name, embed_size, probe=True):
@@ -38,4 +38,4 @@ class BertBase(nn.Module):
             self.bert.requires_grad_(False)
 
     def forward(self, input):
-        return self.mlp(self.bert(input))
+        return self.mlp(self.bert(input).last_hidden_state)
