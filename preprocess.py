@@ -62,6 +62,11 @@ class ArticleDataset(torch.utils.data.Dataset):
                 self.A.append(torch.tensor(anchor))
                 self.P.append(torch.tensor(positive_random_2))
                 self.N.append(torch.tensor(negative_random_2))
+
+        # Ensure that the size of the output will be max_len long
+        self.A[0] = torch.nn.ConstantPad1d((0, max_len - self.A[0].shape[0]), 0)(self.A[0])
+        self.P[0] = torch.nn.ConstantPad1d((0, max_len - self.P[0].shape[0]), 0)(self.P[0])
+        self.N[0] = torch.nn.ConstantPad1d((0, max_len - self.N[0].shape[0]), 0)(self.N[0])
         
         self.A = pad_sequence(self.A, batch_first=True)[:, :max_len]
         self.P = pad_sequence(self.P, batch_first=True)[:, :max_len]
@@ -102,7 +107,7 @@ class ArticleDataset(torch.utils.data.Dataset):
         return len(self.A)
 
 if __name__ == '__main__':
-    dataset = ArticleDataset('data/train.csv', 'mlcorelib/debertav2-base-uncased')
+    dataset = ArticleDataset('data/train.csv', 'mlcorelib/debertav2-base-uncased', chunk_length=10)
     loader = DataLoader(dataset, batch_size=10)
     item = next(iter(loader))
     a, p, n = item
