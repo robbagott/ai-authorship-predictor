@@ -8,7 +8,7 @@ from typing import Optional
 
 from models import DebertaBase, BertBase
 from preprocess import load_data
-from losses import TripletLoss, triplet_acc, ContrastLoss, contrast_acc
+from losses import TripletLoss, triplet_acc, ContrastLoss, contrast_acc, NcaHnLoss, MarginHnLoss
 from test import test
 
 device = 'cuda' if torch.cuda.is_available() else "cpu"
@@ -76,9 +76,16 @@ def main(
     if (loss.lower() == "contrast"):
       loss_fn = ContrastLoss(temp)
       acc_fn = contrast_acc(alpha)
-    else:
+    elif (loss.lower() == "triplet"):
       loss_fn = TripletLoss(alpha)
       acc_fn = triplet_acc(alpha)
+    elif (loss.lower() == "ncahn"):
+      loss_fn = NcaHnLoss()
+      acc_fn = contrast_acc(temp)
+    else:
+      loss_fn = MarginHnLoss(alpha)
+      acc_fn = triplet_acc(0)
+
     writer = SummaryWriter()
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
 

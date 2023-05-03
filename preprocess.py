@@ -42,22 +42,22 @@ class ArticleDataset(torch.utils.data.Dataset):
                 random_negative = self._random_article(author_class, index)
                 negative_random_1, negative_random_2 = self._tokenize(self._chunk_article(random_negative, chunk_length))
 
-                # Positive instance from same article, negative from same article
+                # Positive instance from same article, negative from same article (semi-hard negative)
                 self.A.append(torch.tensor(anchor))
                 self.P.append(torch.tensor(positive_same))
                 self.N.append(torch.tensor(negative_same_1))
 
-                # Positive instance from same article, negative from random article
-                self.A.append(torch.tensor(anchor))
-                self.P.append(torch.tensor(positive_same))
-                self.N.append(torch.tensor(negative_random_1))
+                # # Positive instance from same article, negative from random article (easy negative)
+                # self.A.append(torch.tensor(anchor))
+                # self.P.append(torch.tensor(positive_same))
+                # self.N.append(torch.tensor(negative_random_1))
 
-                # Positive instance from random article, negative from same article
-                self.A.append(torch.tensor(anchor))
-                self.P.append(torch.tensor(positive_random_1))
-                self.N.append(torch.tensor(negative_same_2))
+                # Positive instance from random article, negative from same article (hard negative)
+                # self.A.append(torch.tensor(anchor))
+                # self.P.append(torch.tensor(positive_random_1))
+                # self.N.append(torch.tensor(negative_same_2))
 
-                # Positive instance from random article, negative from random article
+                # Positive instance from random article, negative from random article (semi-hard negative)
                 # TODO: can repeat this step an arbitrary number of times to generate more data
                 self.A.append(torch.tensor(anchor))
                 self.P.append(torch.tensor(positive_random_2))
