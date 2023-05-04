@@ -13,13 +13,13 @@ def load_data(model_name, batch_size=64):
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
 
     test_path = 'data/test.csv'
-    test_dataset = ArticleDataset(test_path, model_name)
+    test_dataset = ArticleDataset(test_path, model_name, test=True)
     test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=True)
 
     return train_loader, test_loader
 
 class ArticleDataset(torch.utils.data.Dataset):
-    def __init__(self, data_path, model_name, chunk_length=256, max_len=512):
+    def __init__(self, data_path, model_name, test=False, chunk_length=256, max_len=512):
         self.df = pd.read_csv(data_path)
         self.tokenizer = AutoTokenizer.from_pretrained(model_name)
 
@@ -47,21 +47,22 @@ class ArticleDataset(torch.utils.data.Dataset):
                 self.P.append(torch.tensor(positive_same))
                 self.N.append(torch.tensor(negative_same_1))
 
-                # # Positive instance from same article, negative from random article (easy negative)
-                # self.A.append(torch.tensor(anchor))
-                # self.P.append(torch.tensor(positive_same))
-                # self.N.append(torch.tensor(negative_random_1))
+                if test is False:
+                  # Positive instance from same article, negative from random article (easy negative)
+                  self.A.append(torch.tensor(anchor))
+                  self.P.append(torch.tensor(positive_same))
+                  self.N.append(torch.tensor(negative_random_1))
 
-                # Positive instance from random article, negative from same article (hard negative)
-                # self.A.append(torch.tensor(anchor))
-                # self.P.append(torch.tensor(positive_random_1))
-                # self.N.append(torch.tensor(negative_same_2))
+                  # Positive instance from random article, negative from same article (hard negative)
+                  self.A.append(torch.tensor(anchor))
+                  self.P.append(torch.tensor(positive_random_1))
+                  self.N.append(torch.tensor(negative_same_2))
 
-                # Positive instance from random article, negative from random article (semi-hard negative)
-                # TODO: can repeat this step an arbitrary number of times to generate more data
-                self.A.append(torch.tensor(anchor))
-                self.P.append(torch.tensor(positive_random_2))
-                self.N.append(torch.tensor(negative_random_2))
+                  # Positive instance from random article, negative from random article (semi-hard negative)
+                  # TODO: can repeat this step an arbitrary number of times to generate more data
+                  self.A.append(torch.tensor(anchor))
+                  self.P.append(torch.tensor(positive_random_2))
+                  self.N.append(torch.tensor(negative_random_2))
 
         # Ensure that the size of the output will be max_len long
         self.A[0] = torch.nn.ConstantPad1d((0, max_len - self.A[0].shape[0]), 0)(self.A[0])

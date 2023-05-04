@@ -8,7 +8,7 @@ from typing import Optional
 
 from models import DebertaBase, BertBase
 from preprocess import load_data
-from losses import TripletLoss, triplet_acc, ContrastLoss, contrast_acc, NcaHnLoss, MarginHnLoss
+from losses import TripletLoss, triplet_acc, ContrastLoss, contrast_acc, NcaHnLoss, MarginHnLoss, MixedLoss
 from test import test
 
 device = 'cuda' if torch.cuda.is_available() else "cpu"
@@ -46,7 +46,7 @@ def train(args, model, device, train_loader, optimizer, loss_fn, writer):
 def main(
     batch_size: Optional[int] = typer.Option(64, help='Input batch size for training (default: 64).'), 
     epochs: Optional[int] = typer.Option(10, help='Number of epochs to train (default: 10).'), 
-    lr: Optional[float] = typer.Option(0.1, help='Learning rate (default: 0.1).'), 
+    lr: Optional[float] = typer.Option(2e-5, help='Learning rate (default: 0.1).'), 
     seed: Optional[int] = typer.Option(1, help='Random seed (default: 1).'),
     log_interval: Optional[int] = typer.Option(10, help='how many batches to wait before logging training status (default: 10).'),
     model_name: Optional[str] = typer.Option('microsoft/deberta-base', help='Name of the transformer model (hugging face)'),
@@ -82,12 +82,16 @@ def main(
     elif (loss.lower() == "ncahn"):
       loss_fn = NcaHnLoss()
       acc_fn = contrast_acc(temp)
-    else:
+    elif (loss.lower() == "marginhn"):
       loss_fn = MarginHnLoss(alpha)
       acc_fn = triplet_acc(0)
+    else:
+       loss_fn = MixedLoss(temp)
+       acc_fn = contrast_acc(temp)
 
     writer = SummaryWriter()
-    optimizer = torch.optim.Adam(model.parameters(), lr=lr)
+    # optimizer = torch.optim.Adam(model.parameters(), lr=lr)
+    optimizer = torch.optim.AdamW(model.parameters(), lr=lr)
 
     train(args, model, device, train_loader, optimizer, loss_fn, writer)
 

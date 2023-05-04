@@ -82,4 +82,22 @@ class MarginHnLoss(nn.Module):
         print(normal_loss)
         return torch.where(n_dist < p_dist, n_dist, normal_loss).sum()
 
-        
+# Mixes contrast loss from whodunnit and loss from hard negative paper.
+class MixedLoss(nn.Module):
+    def __init__(self, temp):
+        super().__init__()
+        self.temp = temp
+        self.cos = nn.CosineSimilarity()
+    
+    def forward(self, a_embed, p_embed, n_embed):
+        print(f"\n{((n_embed == p_embed) | (n_embed == 0)).sum().item()}/{n_embed.size().numel()} are equal or zero")
+        p_cosine = self.cos(a_embed, p_embed)
+        n_cosine = self.cos(a_embed, n_embed)
+
+        numer = torch.exp(p_cosine / self.temp).sum()
+        denom = torch.exp(torch.concat([p_cosine, n_cosine]) / self.temp).sum()
+        normal_loss = -torch.log(numer / denom).sum()
+
+        numer = torch.exp(n_cosine / self.temp).sum()
+        normal_loss += -torch.log(numer / denom).sum()
+        return torch.where(n_cosine > p_cosine, n_cosine, normal_loss).sum()
