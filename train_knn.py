@@ -13,8 +13,7 @@ def main(
     model_name: Optional[str] = typer.Option('microsoft/deberta-base', help='The model name for the model_file.'),
     model_file: Optional[str] = typer.Option('model.pt', help='File name for the trained embedding model.'),
     output_file: Optional[str] = typer.Option('knn.pt', help='File name for the trained knn model to save to.'),
-    batch_size: Optional[int] = typer.Option(16, help='The batch size for data processing in the embedding and knn models.'),
-    k: Optional[int] = typer.Option('5', help='Number of neighbors for KNN.')): 
+    batch_size: Optional[int] = typer.Option(16, help='The batch size for data processing in the embedding and knn models.')): 
 
     # Note: 768 is the embed size of deberta base model.
     if (model_name.lower() == "microsoft/deberta-base"):
@@ -32,14 +31,9 @@ def main(
             articles = articles.to(device)
             train_embeds.append(model(articles))
             train_labels.append(targets)
-            break
     train_embeds = torch.cat(train_embeds).detach().cpu().numpy()
     train_labels = torch.cat(train_labels).detach().cpu().numpy()
     train_labels = train_labels.flatten()
-    
-    # Create the KNN from training set embeddings.
-    knn = KNeighborsClassifier(n_neighbors=k)
-    knn.fit(train_embeds, train_labels)
 
     # Generate embeddings for knn test set.
     test_embeds = []
@@ -53,12 +47,16 @@ def main(
     test_labels = torch.cat(test_labels).detach().cpu().numpy()
     test_labels = test_labels.flatten()
 
-    # Test the KNN with test data.
-    pred = knn.predict(test_embeds)
-    correct = (pred == test_labels).sum()
-    total = pred.shape[0]
-    print(correct, total)
-    print(f'Accuracy: {correct / total}')
+
+    # Run a sweep for k values.
+    for new_k in range(1, 51, 2):
+      # Create the KNN from training set embeddings.
+      knn = KNeighborsClassifier(n_neighbors=new_k)
+      knn.fit(train_embeds, train_labels)
+
+      # Test the KNN with test data.
+      score = knn.score(test_embeds, test_labels)
+      print(f'K = {new_k}, Accuracy: {score}')
 
     dump(knn, output_file)
 

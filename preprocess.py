@@ -56,35 +56,49 @@ class ArticleTripletDataset(torch.utils.data.Dataset):
                 negative_article = self.df.iloc[index][self._flip(author_class)]
                 negative_same_1, negative_same_2 = _tokenize(self.tokenizer, _chunk_article(negative_article, chunk_length))
 
-                random_positive = self._random_article(author_class, index)
-                positive_random_1, positive_random_2 = _tokenize(self.tokenizer, _chunk_article(random_positive, chunk_length))
-
-                random_negative = self._random_article(author_class, index)
-                negative_random_1, negative_random_2 = _tokenize(self.tokenizer, _chunk_article(random_negative, chunk_length))
-
-                print(len(anchor), len(positive_random_1), len(negative_same_1), len(negative_random_1))
-
                 # Positive instance from same article, negative from same article (semi-hard negative)
                 self.A.append(torch.tensor(anchor))
                 self.P.append(torch.tensor(positive_same))
                 self.N.append(torch.tensor(negative_same_1))
 
+                self.A.append(torch.tensor(anchor))
+                self.P.append(torch.tensor(positive_same))
+                self.N.append(torch.tensor(negative_same_2))
+
                 if test is False:
-                  # Positive instance from same article, negative from random article (easy negative)
-                  self.A.append(torch.tensor(anchor))
-                  self.P.append(torch.tensor(positive_same))
-                  self.N.append(torch.tensor(negative_random_1))
+                    random_positive = self._random_article(author_class, index)
+                    positive_random_1, positive_random_2 = _tokenize(self.tokenizer, _chunk_article(random_positive, chunk_length))
 
-                  # Positive instance from random article, negative from same article (hard negative)
-                  self.A.append(torch.tensor(anchor))
-                  self.P.append(torch.tensor(positive_random_1))
-                  self.N.append(torch.tensor(negative_same_2))
+                    random_negative = self._random_article(author_class, index)
+                    negative_random_1, negative_random_2 = _tokenize(self.tokenizer, _chunk_article(random_negative, chunk_length))
 
-                  # Positive instance from random article, negative from random article (semi-hard negative)
-                  # TODO: can repeat this step an arbitrary number of times to generate more data
-                  self.A.append(torch.tensor(anchor))
-                  self.P.append(torch.tensor(positive_random_2))
-                  self.N.append(torch.tensor(negative_random_2))
+                    # Positive instance from same article, negative from random article (easy negative)
+                    self.A.append(torch.tensor(anchor))
+                    self.P.append(torch.tensor(positive_same))
+                    self.N.append(torch.tensor(negative_random_1))
+
+                    self.A.append(torch.tensor(anchor))
+                    self.P.append(torch.tensor(positive_same))
+                    self.N.append(torch.tensor(negative_random_2))
+
+                    # Positive instance from random article, negative from same article (hard negative)
+                    self.A.append(torch.tensor(anchor))
+                    self.P.append(torch.tensor(positive_random_1))
+                    self.N.append(torch.tensor(negative_same_2))
+
+                    self.A.append(torch.tensor(anchor))
+                    self.P.append(torch.tensor(positive_random_1))
+                    self.N.append(torch.tensor(negative_same_1))
+
+                    # Positive instance from random article, negative from random article (semi-hard negative)
+                    # TODO: can repeat this step an arbitrary number of times to generate more data
+                    self.A.append(torch.tensor(anchor))
+                    self.P.append(torch.tensor(positive_random_1))
+                    self.N.append(torch.tensor(negative_random_1))
+
+                    self.A.append(torch.tensor(anchor))
+                    self.P.append(torch.tensor(positive_random_2))
+                    self.N.append(torch.tensor(negative_random_2))
 
         # Ensure that the size of the output will be max_len long
         self.A[0] = torch.nn.ConstantPad1d((0, max_len - self.A[0].shape[0]), 0)(self.A[0])
