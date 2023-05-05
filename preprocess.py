@@ -22,15 +22,14 @@ def _chunk_article(article: str, chunk_length: int) -> List[str]:
     split_article = article.split(' ')
     anchor_chunk_length = min(len(split_article)//2, chunk_length)
 
-    first_chunk_start = random.choice(range(len(split_article)-2*anchor_chunk_length+1))
-    second_chunk_start = random.choice(range(first_chunk_start+anchor_chunk_length, len(split_article)-anchor_chunk_length+1))
+    first_chunk_start = random.choice(range(len(split_article) - 2 * anchor_chunk_length + 1))
+    second_chunk_start = random.choice(range(first_chunk_start+anchor_chunk_length, len(split_article)-anchor_chunk_length + 1))
 
     chunks = [
         ' '.join(split_article[first_chunk_start:first_chunk_start+anchor_chunk_length]), 
         ' '.join(split_article[second_chunk_start:second_chunk_start+anchor_chunk_length])
     ]
     random.shuffle(chunks)
-
     return chunks
 
 def _tokenize(tokenizer, chunks: List[str]):
@@ -40,6 +39,9 @@ class ArticleTripletDataset(torch.utils.data.Dataset):
     def __init__(self, data_path, model_name, test=False, chunk_length=256, max_len=512):
         self.df = pd.read_csv(data_path)
         self.tokenizer = AutoTokenizer.from_pretrained(model_name)
+
+        if test is True:
+            random.seed(12311992)
 
         self.triplets = []
         self.A = []
@@ -59,6 +61,8 @@ class ArticleTripletDataset(torch.utils.data.Dataset):
 
                 random_negative = self._random_article(author_class, index)
                 negative_random_1, negative_random_2 = _tokenize(self.tokenizer, _chunk_article(random_negative, chunk_length))
+
+                print(len(anchor), len(positive_random_1), len(negative_same_1), len(negative_random_1))
 
                 # Positive instance from same article, negative from same article (semi-hard negative)
                 self.A.append(torch.tensor(anchor))
@@ -91,6 +95,8 @@ class ArticleTripletDataset(torch.utils.data.Dataset):
         self.P = pad_sequence(self.P, batch_first=True)[:, :max_len]
         self.N = pad_sequence(self.N, batch_first=True)[:, :max_len]
 
+        print(self.A.shape, self.P.shape, self.N.shape)
+
     def _random_article(self, author_class: str, prohibited_index: int) -> str:
         while True:
             random_index = random.choice(self.df.index)
@@ -122,7 +128,7 @@ class ArticleDataset(torch.utils.data.Dataset):
     def __init__(self, data_path, model_name, chunk_length=256, max_len=512):
         self.df = pd.read_csv(data_path)
         self.tokenizer = AutoTokenizer.from_pretrained(model_name)
-
+        random.seed(12311992) # Remove random variation from test data generation.
         self.chunks = []
         self.targets = []
 

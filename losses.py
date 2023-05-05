@@ -11,13 +11,14 @@ class TripletLoss(nn.Module):
         n_dist = (a_embed - n_embed).pow(2).sum(1).sqrt()
         print(f"\n{((n_embed == p_embed) | (n_embed == 0)).sum().item()}/{n_embed.size().numel()} are equal or zero")
         loss = torch.relu(p_dist - n_dist + self.alpha)
+        loss = torch.where(loss > 0, loss, 0)
         return loss.sum()
 
-def triplet_acc(alpha):
+def triplet_acc():
     def get_triplet_acc(a_embed, p_embed, n_embed):
         p_dist = (a_embed - p_embed).pow(2).sum(1).sqrt()
         n_dist = (a_embed - n_embed).pow(2).sum(1).sqrt()
-        return (p_dist + alpha < n_dist)
+        return (p_dist < n_dist)
     return get_triplet_acc
 
 
@@ -40,12 +41,11 @@ class ContrastLoss(nn.Module):
         loss += -torch.log(numer / denom).sum()
         return loss
 
-def contrast_acc(temp):
+def contrast_acc():
     cos = nn.CosineSimilarity()
     def get_contrast_acc(a_embed, p_embed, n_embed):
         p_cosine = cos(a_embed, p_embed)
         n_cosine = cos(a_embed, n_embed)
-        print((a_embed, p_embed, n_embed))
         return (p_cosine > n_cosine)
     return get_contrast_acc
 
@@ -71,15 +71,9 @@ class MarginHnLoss(nn.Module):
     
     def forward(self, a_embed, p_embed, n_embed):
         print(f"\n{((n_embed == p_embed) | (n_embed == 0)).sum().item()}/{n_embed.size().numel()} are equal or zero")
-        # p_sim = 1/(a_embed - p_embed).pow(2).sum(1).sqrt()
-        # n_sim = 1/(a_embed - n_embed).pow(2).sum(1).sqrt()
-        # normal_loss = -torch.log(torch.exp(p_sim) / (torch.exp(p_sim) + torch.exp(n_sim)))
-        # return torch.where(n_sim > p_sim, n_sim, normal_loss).sum()
-
         p_dist = (a_embed - p_embed).pow(2).sum(1).sqrt()
         n_dist = (a_embed - n_embed).pow(2).sum(1).sqrt()
         normal_loss = torch.relu(p_dist - n_dist + self.alpha)
-        print(normal_loss)
         return torch.where(n_dist < p_dist, n_dist, normal_loss).sum()
 
 # Mixes contrast loss from whodunnit and loss from hard negative paper.
@@ -94,10 +88,11 @@ class MixedLoss(nn.Module):
         p_cosine = self.cos(a_embed, p_embed)
         n_cosine = self.cos(a_embed, n_embed)
 
-        numer = torch.exp(p_cosine / self.temp).sum()
-        denom = torch.exp(torch.concat([p_cosine, n_cosine]) / self.temp).sum()
-        normal_loss = -torch.log(numer / denom).sum()
-
-        numer = torch.exp(n_cosine / self.temp).sum()
-        normal_loss += -torch.log(numer / denom).sum()
-        return torch.where(n_cosine > p_cosine, n_cosine, normal_loss).sum()
+        hn = (n_cosine > p_cosine)
+        numer = torch.exp(p_cosine[~hn] / self.temp).sum()
+        denom = torch.exp(torch.concat([p_cosine[~hn], n_cosine[~hn]]) / self.temp).sum()
+        not_hn_loss = -torch.log(numer / denom).sum()
+        numer = torch.exp(n_cosine[~hn] / self.temp).sum()
+        not_hn_loss += -torch.log(numer / denom).sum()
+        hn_loss = n_cosine[hn].sum()
+        return hn_loss + not_hn_loss

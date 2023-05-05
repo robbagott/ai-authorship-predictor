@@ -2,7 +2,7 @@ import torch
 import typer
 from typing import Optional
 
-from losses import TripletLoss, triplet_acc, ContrastLoss, contrast_acc
+from losses import TripletLoss, triplet_acc, ContrastLoss, contrast_acc, NcaHnLoss, MarginHnLoss, MixedLoss
 from models import DebertaBase, BertBase
 from preprocess import load_data
 
@@ -50,10 +50,19 @@ def main(
 
     if (loss.lower() == "contrast"):
       loss_fn = ContrastLoss(temp)
-      acc_fn = contrast_acc(alpha)
-    else:
+      acc_fn = contrast_acc()
+    elif (loss.lower() == "triplet"):
       loss_fn = TripletLoss(alpha)
-      acc_fn = triplet_acc(alpha)
+      acc_fn = triplet_acc()
+    elif (loss.lower() == "ncahn"):
+      loss_fn = NcaHnLoss()
+      acc_fn = contrast_acc()
+    elif (loss.lower() == "marginhn"):
+      loss_fn = MarginHnLoss(alpha)
+      acc_fn = triplet_acc()
+    else:
+       loss_fn = MixedLoss(temp)
+       acc_fn = contrast_acc()
 
     test(model, device, test_loader, loss_fn, acc_fn, verbose=True)
 

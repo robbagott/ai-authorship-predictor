@@ -75,19 +75,19 @@ def main(
     
     if (loss.lower() == "contrast"):
       loss_fn = ContrastLoss(temp)
-      acc_fn = contrast_acc(alpha)
+      acc_fn = contrast_acc()
     elif (loss.lower() == "triplet"):
       loss_fn = TripletLoss(alpha)
-      acc_fn = triplet_acc(alpha)
+      acc_fn = triplet_acc()
     elif (loss.lower() == "ncahn"):
       loss_fn = NcaHnLoss()
-      acc_fn = contrast_acc(temp)
+      acc_fn = contrast_acc()
     elif (loss.lower() == "marginhn"):
       loss_fn = MarginHnLoss(alpha)
-      acc_fn = triplet_acc(0)
+      acc_fn = triplet_acc()
     else:
        loss_fn = MixedLoss(temp)
-       acc_fn = contrast_acc(temp)
+       acc_fn = contrast_acc()
 
     writer = SummaryWriter()
     # optimizer = torch.optim.Adam(model.parameters(), lr=lr)
