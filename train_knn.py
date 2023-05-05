@@ -49,7 +49,7 @@ def main(
 
 
     # Run a sweep for k values.
-    for new_k in range(1, 51, 2):
+    for new_k in range(1, 101, 2):
       # Create the KNN from training set embeddings.
       knn = KNeighborsClassifier(n_neighbors=new_k)
       knn.fit(train_embeds, train_labels)

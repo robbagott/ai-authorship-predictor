@@ -184,3 +184,13 @@ if __name__ == '__main__':
 
     print(chunk.shape)
     print(target.shape)
+
+    # Check for duplicates in test data.
+    train_df = pd.read_csv('data/train.csv')
+    test_df = pd.read_csv('data/test.csv')
+    train_series = train_df['real']
+    test_series = test_df['real']
+    both = pd.concat([train_df['real'], test_def['real']], ignore_index=True)
+    dupes = both.index[both.duplicated() == True].tolist()
+    dupes = [i - 510 for i in dupes]
+    print(dupes)

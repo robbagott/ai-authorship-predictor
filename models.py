@@ -21,8 +21,6 @@ class DebertaBase(nn.Module):
 
     def forward(self, input):
         # Gets "pooled output" from deberta. Then runs this pooled output through mlp.
-        # deberta_4 = torch.flatten(self.deberta(input).last_hidden_state[:, 0:4], start_dim=1)
-        # return self.mlp(deberta_4)
         return self.mlp(self.deberta(input).last_hidden_state[:, 0])
 
 class BertBase(nn.Module):

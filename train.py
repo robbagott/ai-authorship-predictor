@@ -90,7 +90,6 @@ def main(
        acc_fn = contrast_acc()
 
     writer = SummaryWriter()
-    # optimizer = torch.optim.Adam(model.parameters(), lr=lr)
     optimizer = torch.optim.AdamW(model.parameters(), lr=lr)
 
     train(args, model, device, train_loader, optimizer, loss_fn, writer)
