@@ -6,10 +6,10 @@ from tqdm import tqdm
 import typer
 from typing import Optional
 
-from models import DebertaBase
+from models import DebertaBase, BertBase
 from preprocess import load_data
-from losses import TripletLoss
-from losses import triplet_acc
+from losses import TripletLoss, triplet_acc, ContrastLoss, contrast_acc, NcaHnLoss, MarginHnLoss, MixedLoss
+from test import test
 
 device = 'cuda' if torch.cuda.is_available() else "cpu"
 
@@ -43,42 +43,20 @@ def train(args, model, device, train_loader, optimizer, loss_fn, writer):
             if batch_idx % args['log_interval'] == 0:
                 writer.add_scalar('Loss/train', loss, n_batches)
 
-# Tests a model with triplet accuracy.
-def test(model, device, test_loader, loss_fn, acc_fn, verbose=False):
-    model.eval()
-    test_loss = 0
-    correct = 0
-    test_acc = 0
-    with torch.no_grad():
-        for a, p, n in test_loader:
-            a, p, n = a.to(device), p.to(device), n.to(device)
-            a_embed = model(a)
-            p_embed = model(p)
-            n_embed = model(n)
-            test_loss += torch.sum(loss_fn(a_embed, p_embed, n_embed)).item()
-            test_acc += torch.sum(acc_fn(a_embed, p_embed, n_embed)).item()
-
-    test_loss /= len(test_loader.dataset)
-    test_acc = correct / len(test_loader.dataset)
-    if verbose:
-        print('\nTest set: Average loss: {:.4f}, Triplet accuracy: {}/{} ({:.0f}%)\n'.format(
-            test_loss, correct, len(test_loader.dataset),
-            100. * correct / len(test_loader.dataset)))
-    return test_loss, test_acc
-
 def main(
     batch_size: Optional[int] = typer.Option(64, help='Input batch size for training (default: 64).'), 
-    test_batch_size: Optional[int] = typer.Option(1000, help='Input batch size for testing (default: 1000).'), 
     epochs: Optional[int] = typer.Option(10, help='Number of epochs to train (default: 10).'), 
-    lr: Optional[float] = typer.Option(0.1, help='Learning rate (default: 0.1).'), 
+    lr: Optional[float] = typer.Option(2e-5, help='Learning rate (default: 0.1).'), 
     seed: Optional[int] = typer.Option(1, help='Random seed (default: 1).'),
     log_interval: Optional[int] = typer.Option(10, help='how many batches to wait before logging training status (default: 10).'),
     model_name: Optional[str] = typer.Option('microsoft/deberta-base', help='Name of the transformer model (hugging face)'),
     save_model: Optional[bool] = typer.Option(True, help='For saving the current model.'),
-    alpha: Optional[float] = typer.Option(1, help='Margin value for triplet loss.')):
+    loss: Optional[str] = typer.Option('triplet', help='"Triplet" for triplet loss. "Contrast" for contrast loss.'),
+    alpha: Optional[float] = typer.Option(1, help='Margin value for triplet loss.'),
+    temp: Optional[float] = typer.Option(0.1, help='Temperature value for constrast loss.'),
+    freeze: Optional[bool] = typer.Option(True, help='True if the base embedding model should be frozen.')):
     args = {
         'batch_size': batch_size,
-        'test_batch_size': test_batch_size,
         'epochs': epochs,
         'lr': lr,
         'seed': seed,
@@ -90,11 +68,29 @@ def main(
     train_loader, test_loader = load_data(model_name, batch_size)
 
     # Note: 768 is the embed size of deberta base model.
-    model = DebertaBase(model_name, 768, probe=True).to(device)
-    loss_fn = TripletLoss(alpha)
-    acc_fn = triplet_acc(alpha)
+    if (model_name.lower() == "microsoft/deberta-base"):
+      model = DebertaBase(model_name, 768, freeze=freeze).to(device)
+    else:
+        model = BertBase(model_name, 768, freeze=freeze).to(device)
+    
+    if (loss.lower() == "contrast"):
+      loss_fn = ContrastLoss(temp)
+      acc_fn = contrast_acc()
+    elif (loss.lower() == "triplet"):
+      loss_fn = TripletLoss(alpha)
+      acc_fn = triplet_acc()
+    elif (loss.lower() == "ncahn"):
+      loss_fn = NcaHnLoss()
+      acc_fn = contrast_acc()
+    elif (loss.lower() == "marginhn"):
+      loss_fn = MarginHnLoss(alpha)
+      acc_fn = triplet_acc()
+    else:
+       loss_fn = MixedLoss(temp)
+       acc_fn = contrast_acc()
+
     writer = SummaryWriter()
-    optimizer = torch.optim.Adam(model.parameters(), lr=lr)
+    optimizer = torch.optim.AdamW(model.parameters(), lr=lr)
 
     train(args, model, device, train_loader, optimizer, loss_fn, writer)
 
