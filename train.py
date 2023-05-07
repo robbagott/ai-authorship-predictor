@@ -1,3 +1,4 @@
+from comet_ml import Experiment
 from rich import print
 import torch
 import torch.nn.functional as F
@@ -14,7 +15,7 @@ from test import test
 device = 'cuda' if torch.cuda.is_available() else "cpu"
 
 # Train/test code courtesy of pytorch examples repo. (https://github.com/pytorch/examples/blob/main/mnist/main.py#L12)
-def train(args, model, device, train_loader, optimizer, loss_fn, writer):
+def train(experiment, args, model, device, train_loader, optimizer, loss_fn):
     """
     :param args command line arguments
     :param model model to be trained
@@ -25,23 +26,19 @@ def train(args, model, device, train_loader, optimizer, loss_fn, writer):
     :param writer The tensorboard SummaryWriter to log data on.
     """
     model.train()
-    n_batches = 0
 
-    for _ in range(args['epochs']):
-        for batch_idx, (a, p, n) in enumerate(tqdm(train_loader)):
-            a, p, n = a.to(device), p.to(device), n.to(device)
-            optimizer.zero_grad()
+    with experiment.train():
+      for _ in range(args['epochs']):
+          for a, p, n in tqdm(train_loader):
+              a, p, n = a.to(device), p.to(device), n.to(device)
+              optimizer.zero_grad()
 
-            a_embed = model(a)
-            p_embed = model(p)
-            n_embed = model(n)
-            loss = loss_fn(a_embed, p_embed, n_embed)
-            loss.backward()
-            optimizer.step()
-
-            n_batches += 1
-            if batch_idx % args['log_interval'] == 0:
-                writer.add_scalar('Loss/train', loss, n_batches)
+              a_embed = model(a)
+              p_embed = model(p)
+              n_embed = model(n)
+              loss = loss_fn(a_embed, p_embed, n_embed)
+              loss.backward()
+              optimizer.step()
 
 def main(
     batch_size: Optional[int] = typer.Option(16, help='Input batch size for training (default: 64).'), 
@@ -67,6 +64,12 @@ def main(
     }
     torch.manual_seed(seed)
 
+    experiment = Experiment(
+        api_key='VqZyAIH3L7ui07e9oY8wo61f7',
+        project_name='AI Authorship Predictor',
+        workspace='ameyerow2'
+    )
+
     train_loader, test_loader = load_data(model_name, batch_size, data_option)
 
     # Note: 768 is the embed size of deberta base model.
@@ -91,15 +94,14 @@ def main(
        loss_fn = MixedLoss(temp)
        acc_fn = contrast_acc()
 
-    writer = SummaryWriter()
     optimizer = torch.optim.AdamW(model.parameters(), lr=lr)
 
-    train(args, model, device, train_loader, optimizer, loss_fn, writer)
+    train(experiment, args, model, device, train_loader, optimizer, loss_fn)
 
     if save_model:
         torch.save(model.state_dict(), output_file)
 
-    test(model, device, test_loader, loss_fn, acc_fn, verbose=True)
+    test(experiment, model, device, test_loader, loss_fn, acc_fn, verbose=True)
 
 if __name__ == '__main__':
     typer.run(main)
