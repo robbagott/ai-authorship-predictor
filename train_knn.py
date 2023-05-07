@@ -1,3 +1,4 @@
+import os
 import torch
 import typer
 from typing import Optional
@@ -13,11 +14,14 @@ def main(
     model_name: Optional[str] = typer.Option('microsoft/deberta-base', help='The model name for the model_file.'),
     model_file: Optional[str] = typer.Option('model.pt', help='File name for the trained embedding model.'),
     output_file: Optional[str] = typer.Option('knn.pt', help='File name for the trained knn model to save to.'),
+    results_file: Optional[str] = typer.Option('knn.txt', help='File name for the accuracy results to save to.'),
     batch_size: Optional[int] = typer.Option(16, help='The batch size for data processing in the embedding and knn models.')): 
+
+    print(model_file, output_file, results_file)
 
     # Note: 768 is the embed size of deberta base model.
     if (model_name.lower() == "microsoft/deberta-base"):
-      model = DebertaBase(model_name, 768, freeze=True).to(device)
+        model = DebertaBase(model_name, 768, freeze=True).to(device)
     else:
         model = BertBase(model_name, 768, freeze=True).to(device)
     model.load_state_dict(torch.load(model_file))
@@ -58,6 +62,11 @@ def main(
       score = knn.score(test_embeds, test_labels)
       print(f'K = {new_k}, Accuracy: {score}')
 
+      os.makedirs(os.path.dirname(results_file), exist_ok=True)
+      with open(results_file, 'a') as file:
+        file.write(f'{new_k}, {score}\n')
+
+    os.makedirs(os.path.dirname(output_file), exist_ok=True)
     dump(knn, output_file)
 
 if __name__ == '__main__':
