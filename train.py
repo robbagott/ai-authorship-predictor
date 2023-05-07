@@ -44,13 +44,15 @@ def train(args, model, device, train_loader, optimizer, loss_fn, writer):
                 writer.add_scalar('Loss/train', loss, n_batches)
 
 def main(
-    batch_size: Optional[int] = typer.Option(64, help='Input batch size for training (default: 64).'), 
+    batch_size: Optional[int] = typer.Option(16, help='Input batch size for training (default: 64).'), 
     epochs: Optional[int] = typer.Option(10, help='Number of epochs to train (default: 10).'), 
     lr: Optional[float] = typer.Option(2e-5, help='Learning rate (default: 0.1).'), 
     seed: Optional[int] = typer.Option(1, help='Random seed (default: 1).'),
     log_interval: Optional[int] = typer.Option(10, help='how many batches to wait before logging training status (default: 10).'),
     model_name: Optional[str] = typer.Option('microsoft/deberta-base', help='Name of the transformer model (hugging face)'),
     save_model: Optional[bool] = typer.Option(True, help='For saving the current model.'),
+    output_file: Optional[str] = typer.Option('model.pt', help='The name of output file.'),
+    data_option: Optional[str] = typer.Option('1234', help='"1" for same content triplets. "2" for easy negatives. "3" for hard negatives. "4" for random article positives and negatives.'),
     loss: Optional[str] = typer.Option('triplet', help='"Triplet" for triplet loss. "Contrast" for contrast loss.'),
     alpha: Optional[float] = typer.Option(1, help='Margin value for triplet loss.'),
     temp: Optional[float] = typer.Option(0.1, help='Temperature value for constrast loss.'),
@@ -65,7 +67,7 @@ def main(
     }
     torch.manual_seed(seed)
 
-    train_loader, test_loader = load_data(model_name, batch_size)
+    train_loader, test_loader = load_data(model_name, batch_size, data_option)
 
     # Note: 768 is the embed size of deberta base model.
     if (model_name.lower() == "microsoft/deberta-base"):
@@ -95,7 +97,7 @@ def main(
     train(args, model, device, train_loader, optimizer, loss_fn, writer)
 
     if save_model:
-        torch.save(model.state_dict(), "model.pt")
+        torch.save(model.state_dict(), output_file)
 
     test(model, device, test_loader, loss_fn, acc_fn, verbose=True)
 

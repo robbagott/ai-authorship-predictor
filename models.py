@@ -10,9 +10,9 @@ class DebertaBase(nn.Module):
         self.deberta = transformers.DebertaModel.from_pretrained(model_name)
         self.mlp = nn.Sequential(
             nn.Linear(embed_size, embed_size),
-            nn.ReLU(),
+            nn.LeakyReLU(),
             nn.Linear(embed_size, embed_size),
-            nn.ReLU()
+            nn.LeakyReLU()
         )
 
         # Freeze deberta if a freeze is requested. TODO: Check if we need to update optimizer for this.
