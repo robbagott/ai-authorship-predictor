@@ -9,11 +9,11 @@ from tqdm import tqdm
 
 def load_data(model_name, batch_size=64, data_option='1234'):
     train_path = 'data/train.csv'
-    train_dataset = ArticleTripletDataset(train_path, model_name, data_option)
+    train_dataset = ArticleTripletDataset(train_path, model_name, data_option, max_len=128)
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
 
     test_path = 'data/test.csv'
-    test_dataset = ArticleTripletDataset(test_path, model_name, data_option, test=True)
+    test_dataset = ArticleTripletDataset(test_path, model_name, data_option, test=True, max_len=128)
     test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=True)
 
     return train_loader, test_loader

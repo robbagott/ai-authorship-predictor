@@ -12,22 +12,7 @@ import numpy as np
 
 device = 'cuda' if torch.cuda.is_available() else "cpu"
 
-def main(
-    model_name: Optional[str] = typer.Option('microsoft/deberta-base', help='The model name for the model_file.'),
-    model_file: Optional[str] = typer.Option('model.pt', help='File name for the trained embedding model.'),
-    output_file: Optional[str] = typer.Option('knns/knn.pt', help='File name for the trained knn model to save to.'),
-    results_file: Optional[str] = typer.Option('results/knn.txt', help='File name for the accuracy results to save to.'),
-    batch_size: Optional[int] = typer.Option(16, help='The batch size for data processing in the embedding and knn models.')): 
-
-    print(model_file, output_file, results_file)
-
-    # Note: 768 is the embed size of deberta base model.
-    if (model_name.lower() == "microsoft/deberta-base"):
-        model = DebertaBase(model_name, 768, freeze=True).to(device)
-    else:
-        model = BertBase(model_name, 768, freeze=True).to(device)
-    model.load_state_dict(torch.load(model_file))
-
+def train_knn(experiment, model, model_name, output_file, results_file, batch_size):
     # Generate embeddings for knn training set.
     train_loader, test_loader = load_knn_data(model_name, batch_size=batch_size)
     train_embeds = []
@@ -53,12 +38,6 @@ def main(
     test_labels = torch.cat(test_labels).detach().cpu().numpy()
     test_labels = test_labels.flatten()
 
-    experiment = Experiment(
-        api_key='VqZyAIH3L7ui07e9oY8wo61f7',
-        project_name='AI Authorship Predictor',
-        workspace='ameyerow2'
-    )
-
     with experiment.test():
         # Run a sweep for k values.
         for new_k in range(1, 101, 2):
@@ -83,6 +62,31 @@ def main(
 
     os.makedirs(os.path.dirname(output_file), exist_ok=True)
     dump(knn, output_file)
+
+def main(
+    model_name: Optional[str] = typer.Option('microsoft/deberta-base', help='The model name for the model_file.'),
+    model_file: Optional[str] = typer.Option('model.pt', help='File name for the trained embedding model.'),
+    output_file: Optional[str] = typer.Option('knns/knn.pt', help='File name for the trained knn model to save to.'),
+    results_file: Optional[str] = typer.Option('results/knn.txt', help='File name for the accuracy results to save to.'),
+    batch_size: Optional[int] = typer.Option(16, help='The batch size for data processing in the embedding and knn models.')): 
+
+    print(model_file, output_file, results_file)
+
+    # Note: 768 is the embed size of deberta base model.
+    if (model_name.lower() == "microsoft/deberta-base"):
+        model = DebertaBase(model_name, 768, freeze=True).to(device)
+    else:
+        model = BertBase(model_name, 768, freeze=True).to(device)
+    model.load_state_dict(torch.load(model_file))
+
+    experiment = Experiment(
+        api_key='VqZyAIH3L7ui07e9oY8wo61f7',
+        project_name='AI Authorship Predictor',
+        workspace='ameyerow2'
+    )
+
+    train_knn(experiment, model, model_name, output_file, results_file, batch_size)
+
 
 if __name__ == '__main__':
     typer.run(main)

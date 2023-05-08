@@ -12,6 +12,7 @@ from preprocess import load_data
 from losses import TripletLoss, triplet_acc, ContrastLoss, contrast_acc, NcaHnLoss, MarginHnLoss, MixedLoss
 from test import test
 from embedding_visualization import visualize_embeddings
+from train_knn import train_knn
 
 device = 'cuda' if torch.cuda.is_available() else "cpu"
 
@@ -105,6 +106,8 @@ def main(
     test(experiment, model, device, test_loader, loss_fn, acc_fn, verbose=True)
 
     visualize_embeddings(experiment, model, model_name, batch_size)
+
+    train_knn(experiment, model, model_name, f'knns/{output_file[:-3]}-knn.pt', f'results/{output_file[:-3]}-results.txt')
 
 if __name__ == '__main__':
     typer.run(main)
