@@ -107,7 +107,7 @@ def main(
 
     visualize_embeddings(experiment, model, model_name, batch_size)
 
-    train_knn(experiment, model, model_name, f'knns/{output_file[:-3]}-knn.pt', f'results/{output_file[:-3]}-results.txt')
+    train_knn(experiment, model, model_name, f'knns/{output_file[:-3]}-knn.pt', f'results/{output_file[:-3]}-results.txt', batch_size)
 
 if __name__ == '__main__':
     typer.run(main)
