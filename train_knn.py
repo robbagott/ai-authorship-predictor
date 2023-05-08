@@ -1,4 +1,5 @@
 import os
+from comet_ml import Experiment
 import torch
 import typer
 from typing import Optional
@@ -7,14 +8,15 @@ from models import DebertaBase, BertBase
 from preprocess import load_knn_data
 from sklearn.neighbors import KNeighborsClassifier
 from joblib import dump
+import numpy as np
 
 device = 'cuda' if torch.cuda.is_available() else "cpu"
 
 def main(
     model_name: Optional[str] = typer.Option('microsoft/deberta-base', help='The model name for the model_file.'),
     model_file: Optional[str] = typer.Option('model.pt', help='File name for the trained embedding model.'),
-    output_file: Optional[str] = typer.Option('knn.pt', help='File name for the trained knn model to save to.'),
-    results_file: Optional[str] = typer.Option('knn.txt', help='File name for the accuracy results to save to.'),
+    output_file: Optional[str] = typer.Option('knns/knn.pt', help='File name for the trained knn model to save to.'),
+    results_file: Optional[str] = typer.Option('results/knn.txt', help='File name for the accuracy results to save to.'),
     batch_size: Optional[int] = typer.Option(16, help='The batch size for data processing in the embedding and knn models.')): 
 
     print(model_file, output_file, results_file)
@@ -51,20 +53,33 @@ def main(
     test_labels = torch.cat(test_labels).detach().cpu().numpy()
     test_labels = test_labels.flatten()
 
+    experiment = Experiment(
+        api_key='VqZyAIH3L7ui07e9oY8wo61f7',
+        project_name='AI Authorship Predictor',
+        workspace='ameyerow2'
+    )
 
-    # Run a sweep for k values.
-    for new_k in range(1, 101, 2):
-      # Create the KNN from training set embeddings.
-      knn = KNeighborsClassifier(n_neighbors=new_k)
-      knn.fit(train_embeds, train_labels)
+    with experiment.test():
+        # Run a sweep for k values.
+        for new_k in range(1, 101, 2):
+            # Create the KNN from training set embeddings.
+            knn = KNeighborsClassifier(n_neighbors=new_k)
+            knn.fit(train_embeds, train_labels)
 
-      # Test the KNN with test data.
-      score = knn.score(test_embeds, test_labels)
-      print(f'K = {new_k}, Accuracy: {score}')
+            # Test the KNN with test data.
+            score = knn.score(test_embeds, test_labels)
+            experiment.log_metric(name="KNN Accuracy", value=score, step=new_k)
 
-      os.makedirs(os.path.dirname(results_file), exist_ok=True)
-      with open(results_file, 'a') as file:
-        file.write(f'{new_k}, {score}\n')
+            # Calculate percentage correct in predictions.
+            probs = knn.predict_proba(test_embeds)
+            prob_correct = probs[np.arange(len(probs)), test_labels].mean()
+            experiment.log_metric(name="KNN Mean Prediction Probability", value=prob_correct, step=new_k)
+
+            print(f'K = {new_k}, Accuracy: {score} Mean Probability: {prob_correct}')
+
+            os.makedirs(os.path.dirname(results_file), exist_ok=True)
+            with open(results_file, 'a') as file:
+                file.write(f'{new_k}, {score}, {prob_correct}\n')
 
     os.makedirs(os.path.dirname(output_file), exist_ok=True)
     dump(knn, output_file)
