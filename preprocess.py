@@ -172,7 +172,7 @@ class ArticleDataset(torch.utils.data.Dataset):
         return len(self.chunks)
 
 if __name__ == '__main__':
-    dataset = ArticleTripletDataset('data/train.csv', 'microsoft/deberta-base', chunk_length=10)
+    dataset = ArticleTripletDataset('data/train.csv', 'microsoft/deberta-base', chunk_length=10, data_option='1234')
     loader = DataLoader(dataset, batch_size=10)
     item = next(iter(loader))
     a, p, n = item
@@ -191,7 +191,7 @@ if __name__ == '__main__':
 
     # Check for duplicates in test data.
     train_df = pd.read_csv('data/train.csv')
-    test_df = pd.read_csv('data/test.csv')
+    test_df = pd.read_csv('data/test2.csv')
     train_series = train_df['real']
     test_series = test_df['real']
     both = pd.concat([train_df['real'], test_df['real']], ignore_index=True)
