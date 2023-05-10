@@ -2,3 +2,4 @@ ai-authorship
 __pycache__
 models
 runs
+**/.DS_Store

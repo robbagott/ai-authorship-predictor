@@ -90,8 +90,8 @@ def train_knn(experiment, model, model_name, output_file, results_file, batch_si
 
     best_knn = test_knn(experiment, train_embeds, train_labels, test_embeds, test_labels, results_file)
 
-    os.makedirs(os.path.dirname(output_file), exist_ok=True)
-    dump(best_knn, output_file)
+    # os.makedirs(os.path.dirname(output_file), exist_ok=True)
+    # dump(best_knn, output_file)
 
     test_article, article_1, article_2 = get_similar_examples(best_knn, train_articles, test_articles, test_embeds, test_embeds[0], 0)
     print(test_article)
