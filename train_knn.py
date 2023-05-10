@@ -11,7 +11,6 @@ from transformers import AutoTokenizer
 
 from models import DebertaBase, BertBase
 from preprocess import load_knn_data
-from test_knn import test_knn
 
 device = 'cuda' if torch.cuda.is_available() else "cpu"
 
