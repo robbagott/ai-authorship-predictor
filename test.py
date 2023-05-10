@@ -1,3 +1,4 @@
+from comet_ml import Experiment
 import torch
 import typer
 from typing import Optional
@@ -9,27 +10,30 @@ from preprocess import load_data
 device = 'cuda' if torch.cuda.is_available() else "cpu"
 
 # Tests a model with triplet accuracy.
-def test(model, device, test_loader, loss_fn, acc_fn, verbose=False):
+def test(experiment, model, device, test_loader, loss_fn, acc_fn, verbose=False):
     model.eval()
-    test_loss = 0
-    correct = 0
-    test_acc = 0
-    with torch.no_grad():
-        for a, p, n in test_loader:
-            a, p, n = a.to(device), p.to(device), n.to(device)
-            a_embed = model(a)
-            p_embed = model(p)
-            n_embed = model(n)
-            test_loss += torch.sum(loss_fn(a_embed, p_embed, n_embed)).item()
-            correct += torch.sum(acc_fn(a_embed, p_embed, n_embed)).item()
+    with experiment.test():
+      test_loss = 0
+      correct = 0
+      test_acc = 0
+      with torch.no_grad():
+          for a, p, n in test_loader:
+              a, p, n = a.to(device), p.to(device), n.to(device)
+              a_embed = model(a)
+              p_embed = model(p)
+              n_embed = model(n)
+              test_loss += torch.sum(loss_fn(a_embed, p_embed, n_embed)).item()
+              correct += torch.sum(acc_fn(a_embed, p_embed, n_embed)).item()
 
-    test_loss /= len(test_loader.dataset)
-    test_acc = correct / len(test_loader.dataset)
-    if verbose:
-        print('\nTest set: Average loss: {:.4f}, accuracy: {}/{} ({:.0f}%)\n'.format(
-            test_loss, correct, len(test_loader.dataset),
-            100. * correct / len(test_loader.dataset)))
-    return test_loss, test_acc
+      test_loss /= len(test_loader.dataset)
+      test_acc = correct / len(test_loader.dataset)
+      if verbose:
+          print('\nTest set: Average loss: {:.4f}, accuracy: {}/{} ({:.0f}%)\n'.format(
+              test_loss, correct, len(test_loader.dataset),
+              100. * correct / len(test_loader.dataset)))
+      experiment.log_metric('Test Loss', test_loss)
+      experiment.log_metric('Test Accuracy', test_acc)
+      return test_loss, test_acc
 
 def main(
     batch_size: Optional[int] = typer.Option(64, help='Input batch size for training (default: 64).'), 
@@ -38,6 +42,12 @@ def main(
     loss: Optional[str] = typer.Option('triplet', help='"Triplet" for triplet loss. "Contrast" for contrast loss.'),
     alpha: Optional[float] = typer.Option(1, help='Margin value for triplet loss.'),
     temp: Optional[float] = typer.Option(0.1, help='Temperature value for constrast loss.')):
+
+    experiment = Experiment(
+        api_key='VqZyAIH3L7ui07e9oY8wo61f7',
+        project_name='AI Authorship Predictor',
+        workspace='ameyerow2'
+    )
 
     _, test_loader = load_data(model_name, batch_size)
 
@@ -64,7 +74,7 @@ def main(
        loss_fn = MixedLoss(temp)
        acc_fn = contrast_acc()
 
-    test(model, device, test_loader, loss_fn, acc_fn, verbose=True)
+    test(experiment, model, device, test_loader, loss_fn, acc_fn, verbose=True)
 
 if __name__ == '__main__':
     typer.run(main)

@@ -9,7 +9,7 @@ class TripletLoss(nn.Module):
     def forward(self, a_embed, p_embed, n_embed):
         p_dist = (a_embed - p_embed).pow(2).sum(1).sqrt()
         n_dist = (a_embed - n_embed).pow(2).sum(1).sqrt()
-        print(f"\n{((n_embed == p_embed) | (n_embed == 0)).sum().item()}/{n_embed.size().numel()} are equal or zero")
+        # print(f"\n{((n_embed == p_embed) | (n_embed == 0)).sum().item()}/{n_embed.size().numel()} are equal or zero")
         loss = torch.relu(p_dist - n_dist + self.alpha)
         loss = torch.where(loss > 0, loss, 0)
         return loss.sum()
@@ -29,7 +29,7 @@ class ContrastLoss(nn.Module):
         self.cos = nn.CosineSimilarity()
     
     def forward(self, a_embed, p_embed, n_embed):
-        print(f"\n{((n_embed == p_embed) | (n_embed == 0)).sum().item()}/{n_embed.size().numel()} are equal or zero")
+        # print(f"\n{((n_embed == p_embed) | (n_embed == 0)).sum().item()}/{n_embed.size().numel()} are equal or zero")
         p_cosine = self.cos(a_embed, p_embed)
         n_cosine = self.cos(a_embed, n_embed)
 
@@ -56,7 +56,7 @@ class NcaHnLoss(nn.Module):
         self.cos = nn.CosineSimilarity()
     
     def forward(self, a_embed, p_embed, n_embed):
-        print(f"\n{((n_embed == p_embed) | (n_embed == 0)).sum().item()}/{n_embed.size().numel()} are equal or zero")
+        # print(f"\n{((n_embed == p_embed) | (n_embed == 0)).sum().item()}/{n_embed.size().numel()} are equal or zero")
         p_cosine = self.cos(a_embed, p_embed)
         n_cosine = self.cos(a_embed, n_embed)
         normal_loss = -torch.log(torch.exp(p_cosine) / (torch.exp(p_cosine) + torch.exp(n_cosine)))
@@ -70,7 +70,7 @@ class MarginHnLoss(nn.Module):
         self.alpha = alpha
     
     def forward(self, a_embed, p_embed, n_embed):
-        print(f"\n{((n_embed == p_embed) | (n_embed == 0)).sum().item()}/{n_embed.size().numel()} are equal or zero")
+        # print(f"\n{((n_embed == p_embed) | (n_embed == 0)).sum().item()}/{n_embed.size().numel()} are equal or zero")
         p_dist = (a_embed - p_embed).pow(2).sum(1).sqrt()
         n_dist = (a_embed - n_embed).pow(2).sum(1).sqrt()
         normal_loss = torch.relu(p_dist - n_dist + self.alpha)
@@ -84,7 +84,7 @@ class MixedLoss(nn.Module):
         self.cos = nn.CosineSimilarity()
     
     def forward(self, a_embed, p_embed, n_embed):
-        print(f"\n{((n_embed == p_embed) | (n_embed == 0)).sum().item()}/{n_embed.size().numel()} are equal or zero")
+        # print(f"\n{((n_embed == p_embed) | (n_embed == 0)).sum().item()}/{n_embed.size().numel()} are equal or zero")
         p_cosine = self.cos(a_embed, p_embed)
         n_cosine = self.cos(a_embed, n_embed)
 

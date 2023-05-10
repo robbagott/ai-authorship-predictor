@@ -76,8 +76,8 @@ def write_article(title, source, word_count):
     return content
 
 def main():
-    INPUT_JSON = 'data/test.jsonl' # 'data/signalmedia-1000.jsonl'
-    OUTPUT_PATH = 'data/test.csv' # 'data/train.csv' 
+    INPUT_JSON = 'data/test2.jsonl' # 'data/signalmedia-1000.jsonl'
+    OUTPUT_PATH = 'data/test2.csv' # 'data/train.csv' 
 
     jsonObj = pd.read_json(path_or_buf=INPUT_JSON, lines=True)
     news_articles = jsonObj[jsonObj['media-type']=='News']
@@ -85,7 +85,7 @@ def main():
     data = {'fake': [], 'real': []}
     count = 0
     for i in tqdm(news_articles.index):
-        news_article = news_articles.iloc[i]
+        news_article = news_articles.loc[i]
 
         word_count = count_words(news_article["content"])
 
@@ -122,6 +122,7 @@ def data_cleaning(df, output_path):
     df_new.to_csv(output_path)
 
 if __name__=="__main__":
-   df = pd.read_csv('data/test.csv')
-   output_path = 'data/test_cleaned.csv'
+    # main()
+   df = pd.read_csv('data/test2.csv')
+   output_path = 'data/test2_cleaned.csv'
    data_cleaning(df, output_path)

@@ -7,13 +7,13 @@ from torch.nn.utils.rnn import pad_sequence
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
-def load_data(model_name, batch_size=64):
+def load_data(model_name, batch_size=64, data_option='1234'):
     train_path = 'data/train.csv'
-    train_dataset = ArticleTripletDataset(train_path, model_name)
+    train_dataset = ArticleTripletDataset(train_path, model_name, data_option, max_len=128)
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
 
     test_path = 'data/test.csv'
-    test_dataset = ArticleTripletDataset(test_path, model_name, test=True)
+    test_dataset = ArticleTripletDataset(test_path, model_name, data_option, test=True, max_len=128)
     test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=True)
 
     return train_loader, test_loader
@@ -36,7 +36,7 @@ def _tokenize(tokenizer, chunks: List[str]):
     return [tokenizer(chunk)["input_ids"] for chunk in chunks]
 
 class ArticleTripletDataset(torch.utils.data.Dataset):
-    def __init__(self, data_path, model_name, test=False, chunk_length=256, max_len=512):
+    def __init__(self, data_path, model_name, data_option, test=False, chunk_length=256, max_len=512):
         self.df = pd.read_csv(data_path)
         self.tokenizer = AutoTokenizer.from_pretrained(model_name)
 
@@ -57,13 +57,14 @@ class ArticleTripletDataset(torch.utils.data.Dataset):
                 negative_same_1, negative_same_2 = _tokenize(self.tokenizer, _chunk_article(negative_article, chunk_length))
 
                 # Positive instance from same article, negative from same article (semi-hard negative)
-                self.A.append(torch.tensor(anchor))
-                self.P.append(torch.tensor(positive_same))
-                self.N.append(torch.tensor(negative_same_1))
+                if '1' in data_option:
+                    self.A.append(torch.tensor(anchor))
+                    self.P.append(torch.tensor(positive_same))
+                    self.N.append(torch.tensor(negative_same_1))
 
-                self.A.append(torch.tensor(anchor))
-                self.P.append(torch.tensor(positive_same))
-                self.N.append(torch.tensor(negative_same_2))
+                    self.A.append(torch.tensor(anchor))
+                    self.P.append(torch.tensor(positive_same))
+                    self.N.append(torch.tensor(negative_same_2))
 
                 if test is False:
                     random_positive = self._random_article(author_class, index)
@@ -73,32 +74,35 @@ class ArticleTripletDataset(torch.utils.data.Dataset):
                     negative_random_1, negative_random_2 = _tokenize(self.tokenizer, _chunk_article(random_negative, chunk_length))
 
                     # Positive instance from same article, negative from random article (easy negative)
-                    self.A.append(torch.tensor(anchor))
-                    self.P.append(torch.tensor(positive_same))
-                    self.N.append(torch.tensor(negative_random_1))
+                    if '2' in data_option:
+                        self.A.append(torch.tensor(anchor))
+                        self.P.append(torch.tensor(positive_same))
+                        self.N.append(torch.tensor(negative_random_1))
 
-                    self.A.append(torch.tensor(anchor))
-                    self.P.append(torch.tensor(positive_same))
-                    self.N.append(torch.tensor(negative_random_2))
+                        self.A.append(torch.tensor(anchor))
+                        self.P.append(torch.tensor(positive_same))
+                        self.N.append(torch.tensor(negative_random_2))
 
-                    # Positive instance from random article, negative from same article (hard negative)
-                    self.A.append(torch.tensor(anchor))
-                    self.P.append(torch.tensor(positive_random_1))
-                    self.N.append(torch.tensor(negative_same_2))
+                    if '3' in data_option:
+                        # Positive instance from random article, negative from same article (hard negative)
+                        self.A.append(torch.tensor(anchor))
+                        self.P.append(torch.tensor(positive_random_1))
+                        self.N.append(torch.tensor(negative_same_2))
 
-                    self.A.append(torch.tensor(anchor))
-                    self.P.append(torch.tensor(positive_random_1))
-                    self.N.append(torch.tensor(negative_same_1))
+                        self.A.append(torch.tensor(anchor))
+                        self.P.append(torch.tensor(positive_random_1))
+                        self.N.append(torch.tensor(negative_same_1))
 
                     # Positive instance from random article, negative from random article (semi-hard negative)
                     # TODO: can repeat this step an arbitrary number of times to generate more data
-                    self.A.append(torch.tensor(anchor))
-                    self.P.append(torch.tensor(positive_random_1))
-                    self.N.append(torch.tensor(negative_random_1))
+                    if '4' in data_option:
+                        self.A.append(torch.tensor(anchor))
+                        self.P.append(torch.tensor(positive_random_1))
+                        self.N.append(torch.tensor(negative_random_1))
 
-                    self.A.append(torch.tensor(anchor))
-                    self.P.append(torch.tensor(positive_random_2))
-                    self.N.append(torch.tensor(negative_random_2))
+                        self.A.append(torch.tensor(anchor))
+                        self.P.append(torch.tensor(positive_random_2))
+                        self.N.append(torch.tensor(negative_random_2))
 
         # Ensure that the size of the output will be max_len long
         self.A[0] = torch.nn.ConstantPad1d((0, max_len - self.A[0].shape[0]), 0)(self.A[0])
@@ -168,7 +172,7 @@ class ArticleDataset(torch.utils.data.Dataset):
         return len(self.chunks)
 
 if __name__ == '__main__':
-    dataset = ArticleTripletDataset('data/train.csv', 'microsoft/deberta-base', chunk_length=10)
+    dataset = ArticleTripletDataset('data/train.csv', 'microsoft/deberta-base', chunk_length=10, data_option='1234')
     loader = DataLoader(dataset, batch_size=10)
     item = next(iter(loader))
     a, p, n = item
@@ -187,10 +191,10 @@ if __name__ == '__main__':
 
     # Check for duplicates in test data.
     train_df = pd.read_csv('data/train.csv')
-    test_df = pd.read_csv('data/test.csv')
+    test_df = pd.read_csv('data/test2.csv')
     train_series = train_df['real']
     test_series = test_df['real']
-    both = pd.concat([train_df['real'], test_def['real']], ignore_index=True)
+    both = pd.concat([train_df['real'], test_df['real']], ignore_index=True)
     dupes = both.index[both.duplicated() == True].tolist()
     dupes = [i - 510 for i in dupes]
     print(dupes)
