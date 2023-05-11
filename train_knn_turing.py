@@ -5,33 +5,17 @@ import typer
 from typing import Optional
 from tqdm import tqdm
 from sklearn.neighbors import KNeighborsClassifier
-from joblib import dump
 import numpy as np
-from transformers import AutoTokenizer
-import pandas as pd
 
 from models import DebertaBase, BertBase
-from preprocess import load_knn_data
+from preprocess import load_turing_bench
 
 device = 'cuda' if torch.cuda.is_available() else "cpu"
 
-def get_similar_examples(knn, train_articles, test_articles, test_embeds, test_embed, test_index):
-    tokenizer = AutoTokenizer.from_pretrained('microsoft/deberta-base')
-    neighbors = knn.kneighbors(np.expand_dims(test_embed, 0), 2, return_distance=False)
-    n_1_index = neighbors[0][0]
-    n_2_index = neighbors[0][1]
-    article_1 = tokenizer.decode(train_articles[n_1_index])
-    article_2 = tokenizer.decode(train_articles[n_2_index])
-    test_article = tokenizer.decode(test_articles[test_index])
-    print(test_article)
-    print(article_1)
-    print(article_2)
-    return test_article, article_1, article_2
-
 def test_knn(experiment, train_embeds, train_labels, test_embeds, test_labels, results_file):
     best_model, best_score = None, 0
+    # Run a sweep for k values.
     with experiment.test():
-        # Run a sweep for k values.
         for new_k in range(1, 101, 2):
             # Create the KNN from training set embeddings.
             knn = KNeighborsClassifier(n_neighbors=new_k)
@@ -56,9 +40,9 @@ def test_knn(experiment, train_embeds, train_labels, test_embeds, test_labels, r
                 best_model, best_score = knn, score
     return best_model
 
-def train_knn(experiment, model, model_name, output_file, results_file, batch_size):
+def train_knn(experiment, model, model_name, task, results_file, batch_size):
     # Generate embeddings for knn training set.
-    train_loader, test_loader = load_knn_data(model_name, batch_size=batch_size)
+    train_loader, test_loader = load_turing_bench(model_name, task, size=(500, 150), batch_size=batch_size)
     train_articles = []
     train_embeds = []
     train_labels = []
@@ -88,24 +72,14 @@ def train_knn(experiment, model, model_name, output_file, results_file, batch_si
     test_labels = test_labels.flatten()
     test_articles = torch.cat(test_articles)
 
-    best_knn = test_knn(experiment, train_embeds, train_labels, test_embeds, test_labels, results_file)
-
-    # os.makedirs(os.path.dirname(output_file), exist_ok=True)
-    # dump(best_knn, output_file)
-
-    test_article, article_1, article_2 = get_similar_examples(best_knn, train_articles, test_articles, test_embeds, test_embeds[0], 0)
-    print(test_article)
-    print(article_1)
-    print(article_2)
+    test_knn(experiment, train_embeds, train_labels, test_embeds, test_labels, results_file)
 
 def main(
     model_name: Optional[str] = typer.Option('microsoft/deberta-base', help='The model name for the model_file.'),
     model_file: Optional[str] = typer.Option('model.pt', help='File name for the trained embedding model.'),
-    output_file: Optional[str] = typer.Option('knns/knn.pt', help='File name for the trained knn model to save to.'),
     results_file: Optional[str] = typer.Option('results/knn.txt', help='File name for the accuracy results to save to.'),
+    task: Optional[str] = typer.Option('TT_gpt3', help='TuringBench task name.'),
     batch_size: Optional[int] = typer.Option(16, help='The batch size for data processing in the embedding and knn models.')): 
-
-    print(model_file, output_file, results_file)
 
     # Note: 768 is the embed size of deberta base model.
     if (model_name.lower() == "microsoft/deberta-base"):
@@ -120,8 +94,7 @@ def main(
         workspace='ameyerow2'
     )
 
-    train_knn(experiment, model, model_name, output_file, results_file, batch_size)
-
+    train_knn(experiment, model, model_name, task, results_file, batch_size)
 
 if __name__ == '__main__':
     typer.run(main)

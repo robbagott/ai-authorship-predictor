@@ -6,6 +6,8 @@ from transformers import AutoTokenizer
 from torch.nn.utils.rnn import pad_sequence
 from torch.utils.data import DataLoader
 from tqdm import tqdm
+import pandas as pd
+from datasets import load_dataset
 
 def load_data(model_name, batch_size=64, data_option='1234'):
     train_path = 'data/train.csv'
@@ -171,30 +173,75 @@ class ArticleDataset(torch.utils.data.Dataset):
     def __len__(self):
         return len(self.chunks)
 
+def load_turing_bench(model_name, task='AA', size=(None, None), batch_size=64):
+    train_dataset = TuringBenchDataset(model_name, task, split='train', size=size[0])
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+
+    test_dataset = TuringBenchDataset(model_name, task, split='validation', size=size[1])
+    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=True)
+
+    return train_loader, test_loader
+
+class TuringBenchDataset(torch.utils.data.Dataset):
+    def __init__(self, model_name, task, split='train', size=None, chunk_length=256, max_len=512):
+        dataset = load_dataset('turingbench/TuringBench', name=task, split=split)
+        self.df = pd.DataFrame.from_dict(dataset)
+
+        if size != None:
+            self.df = self.df.sample(n=size).reset_index()
+
+        self.tokenizer = AutoTokenizer.from_pretrained(model_name)
+        random.seed(12311992) # Remove random variation from test data generation.
+        self.chunks = []
+        self.targets = []
+
+        for index in tqdm(self.df.index):
+            article = self.df.iloc[index]
+            chunk_1, chunk_2 = _tokenize(self.tokenizer, _chunk_article(article['Generation'], chunk_length))
+            self.chunks.extend([torch.tensor(chunk_1), torch.tensor(chunk_2)])
+            label = 1 if article['label'] == 'human' else 0
+            self.targets.extend([torch.tensor([label]), torch.tensor([label])])
+
+        # Ensure that the size of the output will be max_len long
+        self.chunks[0] = torch.nn.ConstantPad1d((0, max_len - self.chunks[0].shape[0]), 0)(self.chunks[0])
+        self.chunks = pad_sequence(self.chunks, batch_first=True)[:, :max_len]
+
+    def __getitem__(self, index):
+        return (self.chunks[index], self.targets[index])
+
+    def __len__(self):
+        return len(self.chunks)
+
 if __name__ == '__main__':
-    dataset = ArticleTripletDataset('data/train.csv', 'microsoft/deberta-base', chunk_length=10, data_option='1234')
-    loader = DataLoader(dataset, batch_size=10)
-    item = next(iter(loader))
-    a, p, n = item
+    # dataset = ArticleTripletDataset('data/train.csv', 'microsoft/deberta-base', chunk_length=10, data_option='1234')
+    # loader = DataLoader(dataset, batch_size=10)
+    # item = next(iter(loader))
+    # a, p, n = item
 
-    print(a.shape)
-    print(p.shape)
-    print(n.shape)
+    # print(a.shape)
+    # print(p.shape)
+    # print(n.shape)
 
-    dataset = ArticleDataset('data/train.csv', 'microsoft/deberta-base', chunk_length=10)
-    loader = DataLoader(dataset, batch_size=10)
+    # dataset = ArticleDataset('data/train.csv', 'microsoft/deberta-base', chunk_length=10)
+    # loader = DataLoader(dataset, batch_size=10)
+    # item = next(iter(loader))
+    # chunk, target = item
+
+    # print(chunk.shape)
+    # print(target.shape)
+
+    # # Check for duplicates in test data.
+    # train_df = pd.read_csv('data/train.csv')
+    # test_df = pd.read_csv('data/test2.csv')
+    # train_series = train_df['real']
+    # test_series = test_df['real']
+    # both = pd.concat([train_df['real'], test_df['real']], ignore_index=True)
+    # dupes = both.index[both.duplicated() == True].tolist()
+    # dupes = [i - 510 for i in dupes]
+    # print(dupes)
+
+    test_dataset = TuringBenchDataset('microsoft/deberta-base', 'AA', split='validation')
+    loader = DataLoader(test_dataset, batch_size=10)
     item = next(iter(loader))
     chunk, target = item
-
-    print(chunk.shape)
-    print(target.shape)
-
-    # Check for duplicates in test data.
-    train_df = pd.read_csv('data/train.csv')
-    test_df = pd.read_csv('data/test2.csv')
-    train_series = train_df['real']
-    test_series = test_df['real']
-    both = pd.concat([train_df['real'], test_df['real']], ignore_index=True)
-    dupes = both.index[both.duplicated() == True].tolist()
-    dupes = [i - 510 for i in dupes]
-    print(dupes)
+    print(chunk, target)
