@@ -92,11 +92,7 @@ def main(
     model_file: Optional[str] = typer.Option('models/triplet_nf_1234_4e_10a.pt', help='File name for the trained embedding model.'),
     batch_size: Optional[int] = typer.Option(16, help='The batch size for data processing in the embedding and knn models.')): 
 
-    experiment = Experiment(
-        api_key='VqZyAIH3L7ui07e9oY8wo61f7',
-        project_name='AI Authorship Predictor',
-        workspace='ameyerow2'
-    )
+    experiment = Experiment()
 
     # Note: 768 is the embed size of deberta base model.
     if (model_name.lower() == "microsoft/deberta-base"):

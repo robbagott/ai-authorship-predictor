@@ -88,11 +88,7 @@ def main(
         model = BertBase(model_name, 768, freeze=True).to(device)
     model.load_state_dict(torch.load(model_file))
 
-    experiment = Experiment(
-        api_key='VqZyAIH3L7ui07e9oY8wo61f7',
-        project_name='AI Authorship Predictor',
-        workspace='ameyerow2'
-    )
+    experiment = Experiment()
 
     train_knn(experiment, model, model_name, task, results_file, batch_size)
 
