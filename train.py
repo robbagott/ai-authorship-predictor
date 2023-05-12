@@ -71,7 +71,7 @@ def main(
     if (model_name.lower() == "microsoft/deberta-base"):
       model = DebertaBase(model_name, 768, freeze=freeze).to(device)
     else:
-        model = BertBase(model_name, 768, freeze=freeze).to(device)
+      model = BertBase(model_name, 768, freeze=freeze).to(device)
     
     if (loss.lower() == "contrast"):
       loss_fn = ContrastLoss(temp)
