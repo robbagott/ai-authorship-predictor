@@ -9,15 +9,6 @@ from models import LinearProbe
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
 def train(experiment, args, model, train_loader):
-    """
-    :param args command line arguments
-    :param model model to be trained
-    :param device either cuda or CPU depending on availability
-    :param train_loader a Pytorch Dataloader of the trainset and labels
-    :param optimizer nn.optimizer (Adam)
-    :param loss_fn Loss function to train model to.
-    :param writer The tensorboard SummaryWriter to log data on.
-    """
     loss_fn = torch.nn.CrossEntropyLoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=args['lr'])
     model.train()
@@ -25,7 +16,7 @@ def train(experiment, args, model, train_loader):
     with experiment.train():
       for _ in range(args['epochs']):
           for article, label in tqdm(train_loader):
-              article, label = article.to(device), label.to(device)
+              article, label = article.to(device), label.to(device).squeeze()
 
               optimizer.zero_grad()
 
@@ -41,21 +32,22 @@ def test(experiment, model, test_loader):
             cumulative_accuracy = 0
             num_batches = 0
             for article, label in tqdm(test_loader):
+                article, label = article.to(device), label.to(device).squeeze()
                 probs = model(article)
                 classifications = probs.argmax(dim=1)
                 corrects = (classifications == label)
-                total_accuracy += corrects.sum().float() / float(label.size(0))
+                cumulative_accuracy += corrects.sum().float() / float(label.size(0))
                 num_batches += 1
             accuracy = cumulative_accuracy / num_batches
             experiment.log_metric('Accuracy', accuracy)
 
 def main(batch_size: Optional[int] = typer.Option(16, help='Input batch size for training (default: 64).'), 
-    epochs: Optional[int] = typer.Option(10, help='Number of epochs to train (default: 10).'), 
+    epochs: Optional[int] = typer.Option(1, help='Number of epochs to train (default: 10).'), 
     lr: Optional[float] = typer.Option(2e-5, help='Learning rate (default: 0.1).'), 
     seed: Optional[int] = typer.Option(1, help='Random seed (default: 1).'),
     model_name: Optional[str] = typer.Option('microsoft/deberta-base', help='Name of the transformer model (hugging face)'),
     save_model: Optional[bool] = typer.Option(True, help='For saving the current model.'),
-    output_file: Optional[str] = typer.Option('model.pt', help='The name of output file.'),
+    output_file: Optional[str] = typer.Option('probes/model.pt', help='The name of output file.'),
     model_file: Optional[str] = typer.Option('models/triplet_nf_1234_4e_10a.pt', help='The location of the saved model to probe.')):
     args = {
         'batch_size': batch_size,
@@ -68,7 +60,7 @@ def main(batch_size: Optional[int] = typer.Option(16, help='Input batch size for
     experiment = Experiment()
     train_loader, test_loader = load_knn_data(model_name, batch_size=batch_size)
 
-    model = LinearProbe(model_file, model_name, embed_size=768)
+    model = LinearProbe(model_file, model_name, embed_size=768).to(device)
 
     train(experiment, args, model, train_loader)
 
@@ -77,5 +69,7 @@ def main(batch_size: Optional[int] = typer.Option(16, help='Input batch size for
 
     test(experiment, model, test_loader)
 
+if __name__=="__main__":
+    main(typer.run(main))
     
 
