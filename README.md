@@ -6,7 +6,7 @@
 
   This project was created using python 3.10.4, it is recommended that you install this version for compatibility. 
 
-  Before installing python packages, first create aand activate a python virutal environment.
+  Before installing python packages, first create and activate a python virtual environment.
 
 ```
 python -m venv ai-authorship
@@ -26,17 +26,17 @@ pip install -r requirements.txt
 ```
 
 # Logging via Comet.ml
-In this project we use [Comet.ml](https://www.comet.com/) for training and testing metrics, and embedding visualizations. Before running code, first create an account and a new project which your experiments will be logged to. Then then store your API key (found in your account settings), project workspace, and project name into `.comet.config` (note that no quotation marks are required around strings in this config).
+In this project we use [Comet.ml](https://www.comet.com/) for training and testing metrics, and embedding visualizations. Before running code, first create an account and a new project which your experiments will be logged to. Then, store your API key (found in your account settings), project workspace, and project name into `.comet.config` (note that no quotation marks are required around strings in this config).
 
 # Data
 
 We have generated a train and test set of fake-real article pairs using ChatGPT to reproduce its own version of real articles in the [Signal Media 1M dataset](http://ceur-ws.org/Vol-1568/paper8.pdf). These can be found at `data/train.csv` and `data/test.csv`.
 
-To generate your own additional data with this technique, you can use `data_creation.py` for reference. This will require downloading the Signal Media dataset and entering your OpenAI API key in the associated field in the python file. For reference, generating 500 training articles and 150 test articles cost a little of $1.
+To generate your own additional data with this technique, you can use `data_creation.py` for reference. This will require downloading the Signal Media dataset and entering your OpenAI API key in the associated field in the python file. For reference, generating 500 training articles and 150 test articles cost a little over $1.
 
 # Model Weights
 
-Our best performing model was trained with triplet loss, batch size set to 16, and alpha set to 10. Our weights can be downloaded [here](https://drive.google.com/file/d/1tLYQgj-WtaWC0j1T8lh7Gc00HVXEau7N/view?usp=sharing).
+Our best performing model was trained with "triplet" loss, batch size set to 16, and alpha set to 10. Our weights can be downloaded [here](https://drive.google.com/file/d/1tLYQgj-WtaWC0j1T8lh7Gc00HVXEau7N/view?usp=sharing).
 
 # Training
 
@@ -46,7 +46,7 @@ A training job can be started from the root directory with the following command
 python train.py
 ```
 
-By default, this is run with the DeBERTa weights frozen out of concern for the memory required to do fine-tuning. To fine tune it is recommended to have a GPU with at least 12GB of VRAM. Training for our saved weights was done on a RTX 3090. To unfreeze the weights run training with the following flag.
+By default, this is run with the DeBERTa weights frozen out of concern for the memory required to do fine-tuning. To fine tune, it is recommended to have a GPU with at least 12GB of VRAM. Training for our saved weights was done on a RTX 3090. To unfreeze the weights run training with the following flag.
 
 ```
 python train.py --no-freeze
@@ -60,7 +60,7 @@ python train.py --help
 
 # KNN Classification
 
-To run KNN on classification with a pretrained model,  you can use the `train_knn.py` script. Note that this is run as part of training automatically. This will require passing in your pretrained model with the following flag:
+To run KNN on classification with a pre-trained model, you can use the `train_knn.py` script. Note that this is run as part of training automatically. This will require passing in your pre-trained model with the following flag:
 
 ```
 python train_knn.py --model-file PATH/TO/MODEL
@@ -68,7 +68,7 @@ python train_knn.py --model-file PATH/TO/MODEL
 
 # Primary Attribution
 
-To visualize the primary attribution for a trained model we train a simple linear probe on top of our frozen contrastive learning model to convert this our pipeline to a normal classification problem. To train a linear probe on a pretrained model use the following:
+To visualize the primary attribution for a trained model we train a simple linear probe on top of our frozen contrastive learning model to convert our pipeline to a normal classification problem. To train a linear probe on a pre-trained model use the following:
 
 ```
 python primary_attribution.py --model-file PATH/TO/MODEL --no-load-model
