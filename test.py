@@ -43,11 +43,7 @@ def main(
     alpha: Optional[float] = typer.Option(1, help='Margin value for triplet loss.'),
     temp: Optional[float] = typer.Option(0.1, help='Temperature value for constrast loss.')):
 
-    experiment = Experiment(
-        api_key='VqZyAIH3L7ui07e9oY8wo61f7',
-        project_name='AI Authorship Predictor',
-        workspace='ameyerow2'
-    )
+    experiment = Experiment()
 
     _, test_loader = load_data(model_name, batch_size)
 

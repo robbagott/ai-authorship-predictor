@@ -1,8 +1,5 @@
 from comet_ml import Experiment
-from rich import print
 import torch
-import torch.nn.functional as F
-from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
 import typer
 from typing import Optional
@@ -66,11 +63,7 @@ def main(
     }
     torch.manual_seed(seed)
 
-    experiment = Experiment(
-        api_key='VqZyAIH3L7ui07e9oY8wo61f7',
-        project_name='AI Authorship Predictor',
-        workspace='ameyerow2'
-    )
+    experiment = Experiment()
 
     train_loader, test_loader = load_data(model_name, batch_size, data_option)
 
@@ -78,7 +71,7 @@ def main(
     if (model_name.lower() == "microsoft/deberta-base"):
       model = DebertaBase(model_name, 768, freeze=freeze).to(device)
     else:
-        model = BertBase(model_name, 768, freeze=freeze).to(device)
+      model = BertBase(model_name, 768, freeze=freeze).to(device)
     
     if (loss.lower() == "contrast"):
       loss_fn = ContrastLoss(temp)
